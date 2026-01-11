@@ -4,11 +4,10 @@
 
 #define SLANG_LEX_C
 #define SLANG_PARSE_C
-#define SLANG_DATA_C
+#define STRING_C
 
 #include "lex.c"
-#include "parse.c"
-#include "data.c"
+#include "string.c"
 
 int main(int argc, char* argv[]) {
 	char *filename;
@@ -16,7 +15,6 @@ int main(int argc, char* argv[]) {
     Lexer lexer;
 	FILE* fp;
 	Token_Array tokens;
-    Ast_Node* node;
 
 	if (argc != 2) {
 		fprintf(stderr, "[Usage]: slang <filename>\n");
@@ -30,7 +28,7 @@ int main(int argc, char* argv[]) {
 	tokens = lex(&lexer);
 
 	for (i = 0; i < tokens.sz; ++i) {
-		print_token(tokens.buff[i]);
+		print_token(tokens.arr[i]);
 	}
 
 	return 0;

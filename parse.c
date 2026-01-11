@@ -1,9 +1,143 @@
 #ifndef SLANG_PARSE_H
 #define SLANG_PARSE_H
 
+#include "array.c"
+#include "data.c"
 #include "lex.c"
 
-typedef struct Ast_Node Ast_Node;
+typedef struct Ast_Definition Ast_Definition;
+typedef struct Ast_Statement Ast_Statement;
+typedef struct Ast_If Ast_If;
+
+typedef Array(Ast_Statement*) Ast_Statement_Array;
+typedef Array(Ast_Definition*) Ast_Definition_Array;
+typedef Array(String) String_Array;
+
+typedef struct { 
+    Ast_Definition_Array definitions;
+} Ast_Module;
+
+typedef enum {
+    Ast_Definition_Function = 0,
+    Ast_Definition_Data,
+    Ast_Definition_Literal,
+    Ast_Definition_Count
+} Ast_Definition_Kind;
+
+typedef struct {
+    String_Array parameters;
+    Ast_Statement_Array statements;
+} Ast_Function;
+
+typedef struct {
+    String_Array fields;
+} Ast_Data;
+
+struct Ast_Definition {
+    Ast_Definition_Kind kind;
+    String name;
+    union {
+        Ast_Function function;
+        Ast_Data data;
+    };
+};
+
+typedef enum {
+    Ast_Statement_Assign,
+    Ast_Statement_Loop,
+    Ast_Statement_Condition,
+    Ast_Statement_Expression,
+    Ast_Statement_Count
+} Ast_Statement_Kind;
+
+typedef struct {
+    Ast_Expression* lhs;
+    Ast_Expression* rhs;
+} Ast_Assign;
+
+typedef struct {
+    Ast_Statement* init;
+    Ast_Expression* end;
+    Ast_Expression* update;
+    Ast_Statement_Array statements;
+} Ast_Loop;
+
+typedef struct {
+    Ast_Expression* condition;
+    Ast_Statement_Array statements;
+} Ast_If;
+
+typedef struct {
+    Ast_If* iff;
+    Ast_If_Array elifs;
+    Ast_Statement_Array els;
+} Ast_Condition;
+
+
+struct Ast_Statement {
+    Ast_Statement_Kind kind;
+    union {
+        Ast_Assign assign;
+        Ast_Loop loop;
+        Ast_Condition condition;
+        Ast_Expression* expression;
+    };
+};
+
+typedef enum {
+    Ast_Expression_Binary = 0, 
+    Ast_Expression_Unary,
+    Ast_Expression_Function_Call,
+    Ast_Expression_Accessor,
+    Ast_Expression_Count
+} Ast_Expression_Kind;
+
+typedef enum {
+    Ast_Unary_Negative = Token_Sub,
+    Ast_Unary_Not = Token_Not,
+    Ast_Unary_Cnot = Token_Cnot
+} Ast_Unary_Kind;
+
+typedef struct {
+    Ast_Unary_Kind kind;
+    Ast_Expression* expression;
+} Ast_Expression_Unary;
+
+typedef enum {
+	Ast_Binary_Add = Token_Add,
+	Ast_Binary_Sub = Token_Sub,
+	Ast_Binary_Mul = Token_Mul, 
+	Ast_Binary_Div = Token_Div,
+    Ast_Binary_Mod = Token_Mod,
+
+    // boolean operators
+    Ast_Binary_And = Token_And,
+    Ast_Binary_Or = Token_Or,
+    Ast_Binary_Xor = Token_Xor,
+    Ast_Binary_Not = Token_Not,
+
+    // conditional operators
+    Ast_Binary_Cnot = Token_Cnot,
+    Ast_Binary_Cand = Token_Cand,
+    Ast_Binary_Cor = Token_Cor,
+    Ast_Binary_Lt = Token_Lt,
+    Ast_Binary_Le = Token_Le,
+    Ast_Binary_Gt = Token_Gt,
+    Ast_Binary_Ge = Token_Ge,
+    Ast_Binary_Eq = Token_Eq,
+    Ast_Binary_Neq = Token_Neq
+} Ast_Binary_Kind;
+
+typedef struct {
+    Ast_Binary_Kind kind;
+    Ast_Expression* left;
+    Ast_Expression* right;
+} Ast_Expression_Binary;
+
+struct Ast_Expression {
+    Ast_Expression_Kind kind;
+
+};
 
 typedef enum {
     Ast_Operator = 0,

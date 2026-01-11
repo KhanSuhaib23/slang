@@ -1,5 +1,5 @@
-#ifndef SLANG_DATA_H
-#define SLANG_DATA_H
+#ifndef STRING_H
+#define STRING_H
 
 #include <stdlib.h>
 #include <stdint.h>
@@ -13,7 +13,7 @@ typedef struct {
 String from_cstring(const char* str);
 String from_slice(const char* str, size_t st, size_t ed);
 
-#ifdef SLANG_DATA_C
+#ifdef STRING_C
 
 String from_cstring(const char* str) {
     size_t len = strlen(str);
@@ -42,5 +42,5 @@ String from_slice(const char* str, size_t st, size_t ed) {
     };
 }
 
-#endif // SLANG_DATA_C
-#endif // SLANG_DATA_H
+#endif // STRING_C
+#endif // STRING_H

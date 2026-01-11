@@ -4,7 +4,8 @@
 #include <stdint.h>
 #include <stdlib.h>
 
-#include "data.c"
+#include "string.c"
+#include "array.c"
 
 typedef enum {
 	Token_Eof = 0,
@@ -72,6 +73,9 @@ typedef enum {
     Token_Break,
     Token_Continue,
     Token_In,
+    Token_If,
+    Token_Elif,
+    Token_Else,
 
 
 	Token_Count
@@ -170,11 +174,7 @@ typedef struct {
 	};
 } Token;
 
-typedef struct {
-	Token* buff;
-	size_t sz;
-	size_t cp;
-} Token_Array;
+typedef Array(Token) Token_Array;
 
 typedef struct {
     size_t col, line, pos;
@@ -185,8 +185,6 @@ typedef struct {
 Lexer create_lexer(const char* filename);
 Token_Array lex(Lexer* lexer);
 void print_token(Token token);
-Token_Array token_array_new();
-void token_array_push(Token_Array* array, Token token);
 
 #ifdef SLANG_LEX_C
 
@@ -224,7 +222,7 @@ Token_Array lex(Lexer* lexer) {
     int64_t i;
     double d, e;
 
-	tokens = token_array_new();
+	tokens = (Token_Array) {0};
 
     while (lex_curr()) {
         switch (lex_curr()) {
@@ -262,7 +260,7 @@ Token_Array lex(Lexer* lexer) {
                     token.decimal = d;
                 }
 
-                token_array_push(&tokens, token);
+                array_push_back(&tokens, token);
                 break;
 
             case '"':
@@ -283,7 +281,7 @@ Token_Array lex(Lexer* lexer) {
                 token.kind = Token_String;
                 token.string = from_slice(lexer->st, st, ed);
 
-                token_array_push(&tokens, token);
+                array_push_back(&tokens, token);
                 break;
 
 
@@ -329,8 +327,17 @@ Token_Array lex(Lexer* lexer) {
                     token.kind = Token_Continue;
                 } else if (strcmp(token.string.str, "in") == 0) {
                     token.kind = Token_In;
+                } else if (strcmp(token.string.str, "if") == 0) {
+                    token.kind = Token_If;
+                } else if (strcmp(token.string.str, "elif") == 0) {
+                    token.kind = Token_Elif;
+                } else if (strcmp(token.string.str, "else") == 0) {
+                    token.kind = Token_Else;
                 }
-                token_array_push(&tokens, token);
+
+
+
+                array_push_back(&tokens, token);
                 break;
 
             case '+': case '-': case '*': case '/': case '%':
@@ -341,12 +348,12 @@ Token_Array lex(Lexer* lexer) {
                     token.kind += ASSIGN_OFFSET;
                     lex_next();
                 }
-                token_array_push(&tokens, token);
+                array_push_back(&tokens, token);
                 break;
             case '~':
                 token.kind = Token_Not;
                 lex_next();
-                token_array_push(&tokens, token);
+                array_push_back(&tokens, token);
                 break;
             case '!':
                 token.kind = Token_Cnot;
@@ -356,7 +363,7 @@ Token_Array lex(Lexer* lexer) {
                     token.kind = Token_Neq;
                     lex_next();
                 }
-                token_array_push(&tokens, token);
+                array_push_back(&tokens, token);
                 break;
             case '=':
                 token.kind = Token_Assign;
@@ -366,7 +373,7 @@ Token_Array lex(Lexer* lexer) {
                     token.kind = Token_Eq;
                     lex_next();
                 }
-                token_array_push(&tokens, token);
+                array_push_back(&tokens, token);
                 break;
             case '&':
                 token.kind = Token_And;
@@ -378,7 +385,7 @@ Token_Array lex(Lexer* lexer) {
                     token.kind = Token_Cand;
                     lex_next();
                 }
-                token_array_push(&tokens, token);
+                array_push_back(&tokens, token);
                 break;
             case '|':
                 token.kind = Token_Or;
@@ -390,7 +397,7 @@ Token_Array lex(Lexer* lexer) {
                     token.kind = Token_Cor;
                     lex_next();
                 }
-                token_array_push(&tokens, token);
+                array_push_back(&tokens, token);
                 break;
             case '^':
                 token.kind = Token_Xor;
@@ -399,7 +406,7 @@ Token_Array lex(Lexer* lexer) {
                     token.kind = Token_Xor_Assign;
                     lex_next();
                 } 
-                token_array_push(&tokens, token);
+                array_push_back(&tokens, token);
                 break;
             case '<':
                 token.kind = Token_Lt;
@@ -408,7 +415,7 @@ Token_Array lex(Lexer* lexer) {
                     token.kind = Token_Le;
                     lex_next();
                 }
-                token_array_push(&tokens, token);
+                array_push_back(&tokens, token);
                 break;
             case '>':
                 token.kind = Token_Gt;
@@ -417,14 +424,14 @@ Token_Array lex(Lexer* lexer) {
                     token.kind = Token_Ge;
                     lex_next();
                 }
-                token_array_push(&tokens, token);
+                array_push_back(&tokens, token);
                 break;
 
             case '(': case ')': case '[': case ']': case '{': 
             case '}': case '.': case ',': case ';': case ':':
                 token.kind = char_map[lex_curr()];
                 lex_next();
-                token_array_push(&tokens, token);
+                array_push_back(&tokens, token);
                 break;
         }
 
@@ -432,7 +439,7 @@ Token_Array lex(Lexer* lexer) {
 
 	token.kind = Token_Eof;
 
-	token_array_push(&tokens, token);
+	array_push_back(&tokens, token);
 
 	return tokens;
 }
@@ -500,28 +507,13 @@ void print_token(Token token) {
         case Token_Break: printf("TOKEN[Break]\n"); break;
         case Token_Continue: printf("TOKEN[Continue]\n"); break;
         case Token_In: printf("TOKEN[In]\n"); break;
+        case Token_If: printf("TOKEN[If]\n"); break;
+        case Token_Elif: printf("TOKEN[Elif]\n"); break;
+        case Token_Else: printf("TOKEN[Else]\n"); break;
         default:
 			printf("Token[Unknown]\n");
 			break;
 	}
-}
-
-Token_Array token_array_new() {
-	return (Token_Array) {
-		.buff = (Token*) malloc(sizeof(Token) * 8),
-		.sz = 0,
-		.cp = 8
-	};
-}
-
-
-void token_array_push(Token_Array* array, Token token) {
-	if (array->sz == array->cp) { 
-		array->cp *= 2;
-		array->buff = (Token*) realloc(array->buff, sizeof(Token) * array->cp);
-	}
-
-	array->buff[array->sz++] = token;
 }
 
 #endif // SLANG_LEX_C 

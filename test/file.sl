@@ -28,6 +28,16 @@ fn loops() {
 
     return [s1, s2];
 }
+
+fn conditions(num, threshold, higher, lower, same) {
+    if num > threshold {
+        return higher
+    } elif num < threshold {
+        return lower
+    } else {
+        return same
+    }
+}
         
 
 fn sum(list) {
@@ -88,4 +98,7 @@ fn main() {
     r = loops();
 
     print(r);
+
+    print(conditions(10, 3, "Higher", "Lower", "Same"));
+    print(conditions(10, 30, "Higher", "Lower", "Same"));
 }
