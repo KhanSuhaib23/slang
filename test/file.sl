@@ -20,13 +20,7 @@ fn loops() {
         }
     }
 
-    s2 = 0;
-
-    loop it in range(0, 10) {
-        s2 += it;
-    }
-
-    return [s1, s2];
+    return s1
 }
 
 fn conditions(num, threshold, higher, lower, same) {

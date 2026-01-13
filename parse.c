@@ -47,6 +47,8 @@ typedef enum {
     Ast_Statement_Loop,
     Ast_Statement_Condition,
     Ast_Statement_Expression,
+    Ast_Statement_Break,
+    Ast_Statement_Continue,
     Ast_Statement_Count
 } Ast_Statement_Kind;
 
@@ -134,70 +136,122 @@ typedef struct {
     Ast_Expression* right;
 } Ast_Expression_Binary;
 
+typedef struct {
+    Ast_Expression* function;
+    Ast_Expression_Array parameters;
+} Ast_Expression_Function_Call;
+
+typedef enum {
+    Ast_Expression_Integer = Token_Int,
+    Ast_Expression_String = Token_String,
+    Ast_Expression_Decimal = Token_Decimal
+} Ast_Expression_Literal_Kind;
+
+typedef struct {
+    Ast_Expression_Literal_Kind kind;
+    union {
+        String string;
+        int64_t integer;
+        double decimal;
+    }; 
+} Ast_Expression_Literal;
+
+
 struct Ast_Expression {
     Ast_Expression_Kind kind;
-
+    union {
+        Ast_Expression_Unary unary;
+        Ast_Expression_Binary binary;
+        Ast_Expression_Function_Call function_call;
+        String identifier;
+        Ast_Expression_Literal;
 };
 
-typedef enum {
-    Ast_Operator = 0,
-    Ast_Literal,
-    Ast_Count
-} Ast_Node_Kind;
-
-typedef enum {
-    Operator_Add = 0,
-    Operator_Sub,
-    Operator_Mul,
-    Operator_Div,
-    Operator_Count
-} Operator_Kind;
-
-typedef enum {
-    Literal_Int = 0,
-    Literal_Count
-} Literal_Type;
-
 typedef struct {
-    Operator_Kind kind;
-    Ast_Node* left;
-    Ast_Node* right;
-} Binary_Operator_Node;
+    Token* current;
+    Token* start;
+    size_t index;
+} Parser;
 
-typedef struct {
-    Literal_Type type;
-    union {
-        int64_t integer;
-    };
-} Literal_Node;
 
-struct Ast_Node {
-    Ast_Node_Kind kind;
-    union {
-        Binary_Operator_Node binary_operator;
-        Literal_Node literal;
-    };
-};
-
-Ast_Node* parse(Token_Array tokens);
-void print_ast(Ast_Node* root);
+Ast_Module parse_module(Parser* parser);
 
 #ifdef SLANG_PARSE_C
 
-Operator_Kind operator_map[Token_Count] = {
-    [Token_Add] = Operator_Add,
-    [Token_Sub] = Operator_Sub,
-    [Token_Mul] = Operator_Mul,
-    [Token_Div] = Operator_Div
-};
+int parser_consume_if(Parser* parser, Token_Kind kind) {
+    if (parser->current->kind == kind) {
+        parser->current++;
+        parser->pos++;
 
-Ast_Node* new_integer(int64_t i) {
-    Ast_Node* node = malloc(sizeof(Ast_Node));
-    node->kind = Ast_Literal;
-    node->literal.type = Literal_Int;
-    node->literal.integer = i;
+        return 1;
+    }
 
-    return node;
+    return 0;
+}
+
+Token parser_is(Parser* parser, Token_Kind kind) {
+    return parser->current->kind == kind;
+}
+
+Token parser_assert_is(Parser* parser, Token_Kind kind) {
+    assert(parser->current->kind == kind);
+    Token token = *parser->current;
+    parser->current++;
+    parser->pos++;
+    return token;
+}
+
+void parser_consume(Parser* parser) {
+    parser->current++;
+    parser->pos++;
+}
+
+Ast_Statement parse_loop(Parser* parser) {
+}
+
+Ast_Statement parse_statement(Parser* parser) {
+    if (parser_is(parser, Token_Loop)) {
+    } else if (parser_is(parser, Token_If)) {
+    } else {
+    }
+
+} 
+
+Ast_Statement_Array parse_block(Parser* parser) {
+    Ast_Statement_Array statements = (Ast_Statement_Array) {0};
+    parser_assert_is(parser, Token_Lbrace);
+
+    while (!parser_is(parser, Token_Rbrace)) {
+        Ast_Statement statement = parse_statement(parser);
+        array_push_back(&statements, statement);
+    }
+
+    return statements;
+}
+
+Ast_Module parse_module(Parser* parser) {
+    switch (parser->current-kind) {
+        case Token_Fn:
+            Ast_Definition function_definition = (Ast_Definition) {0};
+            function_definition.kind = Ast_Definition_Function;
+
+            parser_consume(parser);
+            Token name = parser_assert_is(parser, Token_Identifier);
+            function_definition.name = name.identifier;
+
+            parser_assert_is(parser, Token_Lparen);
+
+            while (!parser_consume_if(parser, Token_Rparen)) {
+                name = parser_assert_is(parser, Token_Identifier);
+
+                array_push_back(&function_definition.function.parameters, name.identifier);
+
+                parser_assert_is(parser, Token_Comma);
+            }
+
+
+
+    }
 }
 
 Ast_Node* new_binary_operator(Token_Kind kind, Ast_Node* left, Ast_Node* right) {
