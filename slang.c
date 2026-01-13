@@ -14,7 +14,7 @@ int main(int argc, char* argv[]) {
 	size_t count, i;
     Lexer lexer;
 	FILE* fp;
-	Token_Array tokens;
+    Token token;
 
 	if (argc != 2) {
 		fprintf(stderr, "[Usage]: slang <filename>\n");
@@ -25,11 +25,9 @@ int main(int argc, char* argv[]) {
 
     lexer = create_lexer(filename);
 
-	tokens = lex(&lexer);
-
-	for (i = 0; i < tokens.sz; ++i) {
-		print_token(tokens.arr[i]);
-	}
+    while (token = next_token(&lexer), token.kind != Token_Eof) {
+        print_token(token);
+    }
 
 	return 0;
 }
