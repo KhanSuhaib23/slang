@@ -1,133 +1,49 @@
 #ifndef SLANG_PARSE_H
 #define SLANG_PARSE_H
 
+#include <assert.h>
+
 #include "array.c"
-#include "data.c"
 #include "lex.c"
 
-typedef struct Ast_Definition Ast_Definition;
-typedef struct Ast_Statement Ast_Statement;
-typedef struct Ast_If Ast_If;
+typedef struct Ast_Expression Ast_Expression;
 
-typedef Array(Ast_Statement*) Ast_Statement_Array;
-typedef Array(Ast_Definition*) Ast_Definition_Array;
-typedef Array(String) String_Array;
+typedef Array(Ast_Expression*) Ast_Expression_Array;
 
 typedef struct { 
-    Ast_Definition_Array definitions;
+    Ast_Expression_Array statements;
 } Ast_Module;
 
-typedef enum {
-    Ast_Definition_Function = 0,
-    Ast_Definition_Data,
-    Ast_Definition_Literal,
-    Ast_Definition_Count
-} Ast_Definition_Kind;
-
-typedef struct {
-    String_Array parameters;
-    Ast_Statement_Array statements;
-} Ast_Function;
-
-typedef struct {
-    String_Array fields;
-} Ast_Data;
-
-struct Ast_Definition {
-    Ast_Definition_Kind kind;
-    String name;
-    union {
-        Ast_Function function;
-        Ast_Data data;
-    };
-};
 
 typedef enum {
-    Ast_Statement_Assign,
-    Ast_Statement_Loop,
-    Ast_Statement_Condition,
     Ast_Statement_Expression,
-    Ast_Statement_Break,
-    Ast_Statement_Continue,
     Ast_Statement_Count
 } Ast_Statement_Kind;
-
-typedef struct {
-    Ast_Expression* lhs;
-    Ast_Expression* rhs;
-} Ast_Assign;
-
-typedef struct {
-    Ast_Statement* init;
-    Ast_Expression* end;
-    Ast_Expression* update;
-    Ast_Statement_Array statements;
-} Ast_Loop;
-
-typedef struct {
-    Ast_Expression* condition;
-    Ast_Statement_Array statements;
-} Ast_If;
-
-typedef struct {
-    Ast_If* iff;
-    Ast_If_Array elifs;
-    Ast_Statement_Array els;
-} Ast_Condition;
-
 
 struct Ast_Statement {
     Ast_Statement_Kind kind;
     union {
-        Ast_Assign assign;
-        Ast_Loop loop;
-        Ast_Condition condition;
         Ast_Expression* expression;
     };
 };
 
 typedef enum {
-    Ast_Expression_Binary = 0, 
-    Ast_Expression_Unary,
-    Ast_Expression_Function_Call,
-    Ast_Expression_Accessor,
-    Ast_Expression_Count
+    Ast_Binary = 0, 
+    Ast_Literal,
+    Ast_Identifier,
+    Ast_Function_Call,
+    Ast_Count
 } Ast_Expression_Kind;
 
 typedef enum {
-    Ast_Unary_Negative = Token_Sub,
-    Ast_Unary_Not = Token_Not,
-    Ast_Unary_Cnot = Token_Cnot
-} Ast_Unary_Kind;
-
-typedef struct {
-    Ast_Unary_Kind kind;
-    Ast_Expression* expression;
-} Ast_Expression_Unary;
-
-typedef enum {
+    Ast_Binary_Assign = Token_Assign,
 	Ast_Binary_Add = Token_Add,
 	Ast_Binary_Sub = Token_Sub,
 	Ast_Binary_Mul = Token_Mul, 
 	Ast_Binary_Div = Token_Div,
     Ast_Binary_Mod = Token_Mod,
-
-    // boolean operators
     Ast_Binary_And = Token_And,
-    Ast_Binary_Or = Token_Or,
-    Ast_Binary_Xor = Token_Xor,
-    Ast_Binary_Not = Token_Not,
-
-    // conditional operators
-    Ast_Binary_Cnot = Token_Cnot,
-    Ast_Binary_Cand = Token_Cand,
-    Ast_Binary_Cor = Token_Cor,
-    Ast_Binary_Lt = Token_Lt,
-    Ast_Binary_Le = Token_Le,
-    Ast_Binary_Gt = Token_Gt,
-    Ast_Binary_Ge = Token_Ge,
-    Ast_Binary_Eq = Token_Eq,
-    Ast_Binary_Neq = Token_Neq
+    Ast_Binary_Or = Token_Or
 } Ast_Binary_Kind;
 
 typedef struct {
@@ -137,22 +53,18 @@ typedef struct {
 } Ast_Expression_Binary;
 
 typedef struct {
-    Ast_Expression* function;
+    String identifier;
     Ast_Expression_Array parameters;
 } Ast_Expression_Function_Call;
 
 typedef enum {
     Ast_Expression_Integer = Token_Int,
-    Ast_Expression_String = Token_String,
-    Ast_Expression_Decimal = Token_Decimal
 } Ast_Expression_Literal_Kind;
 
 typedef struct {
     Ast_Expression_Literal_Kind kind;
     union {
-        String string;
         int64_t integer;
-        double decimal;
     }; 
 } Ast_Expression_Literal;
 
@@ -160,155 +72,191 @@ typedef struct {
 struct Ast_Expression {
     Ast_Expression_Kind kind;
     union {
-        Ast_Expression_Unary unary;
         Ast_Expression_Binary binary;
         Ast_Expression_Function_Call function_call;
         String identifier;
-        Ast_Expression_Literal;
+        Ast_Expression_Literal literal;
+    };
 };
 
 typedef struct {
-    Token* current;
-    Token* start;
-    size_t index;
+    Token current;
+    Lexer lexer;
 } Parser;
 
 
+Parser create_parser(Lexer lex);
 Ast_Module parse_module(Parser* parser);
 
 #ifdef SLANG_PARSE_C
 
-int parser_consume_if(Parser* parser, Token_Kind kind) {
-    if (parser->current->kind == kind) {
-        parser->current++;
-        parser->pos++;
-
-        return 1;
-    }
-
-    return 0;
+Parser create_parser(Lexer lex) {
+    Parser parser = (Parser) {0};
+    parser.current = next_token(&lex);
+    parser.lexer = lex;
+    
+    return parser;
 }
 
-Token parser_is(Parser* parser, Token_Kind kind) {
-    return parser->current->kind == kind;
-}
-
-Token parser_assert_is(Parser* parser, Token_Kind kind) {
-    assert(parser->current->kind == kind);
-    Token token = *parser->current;
-    parser->current++;
-    parser->pos++;
-    return token;
-}
-
-void parser_consume(Parser* parser) {
-    parser->current++;
-    parser->pos++;
-}
-
-Ast_Statement parse_loop(Parser* parser) {
-}
-
-Ast_Statement parse_statement(Parser* parser) {
-    if (parser_is(parser, Token_Loop)) {
-    } else if (parser_is(parser, Token_If)) {
-    } else {
-    }
-
-} 
-
-Ast_Statement_Array parse_block(Parser* parser) {
-    Ast_Statement_Array statements = (Ast_Statement_Array) {0};
-    parser_assert_is(parser, Token_Lbrace);
-
-    while (!parser_is(parser, Token_Rbrace)) {
-        Ast_Statement statement = parse_statement(parser);
-        array_push_back(&statements, statement);
-    }
-
-    return statements;
-}
-
-Ast_Module parse_module(Parser* parser) {
-    switch (parser->current-kind) {
-        case Token_Fn:
-            Ast_Definition function_definition = (Ast_Definition) {0};
-            function_definition.kind = Ast_Definition_Function;
-
-            parser_consume(parser);
-            Token name = parser_assert_is(parser, Token_Identifier);
-            function_definition.name = name.identifier;
-
-            parser_assert_is(parser, Token_Lparen);
-
-            while (!parser_consume_if(parser, Token_Rparen)) {
-                name = parser_assert_is(parser, Token_Identifier);
-
-                array_push_back(&function_definition.function.parameters, name.identifier);
-
-                parser_assert_is(parser, Token_Comma);
-            }
-
-
-
-    }
-}
-
-Ast_Node* new_binary_operator(Token_Kind kind, Ast_Node* left, Ast_Node* right) {
-    Ast_Node* node = malloc(sizeof(Ast_Node));
-    node->kind = Ast_Operator;
-    node->binary_operator.kind = operator_map[kind];
-    node->binary_operator.left = left;
-    node->binary_operator.right = right;
+Ast_Expression* new_binary_operator(Token_Kind kind, Ast_Expression* left, Ast_Expression* right) {
+    Ast_Expression* node = calloc(sizeof(Ast_Expression), 1);
+    node->kind = Ast_Binary;
+    node->binary.kind = kind;
+    node->binary.left = left;
+    node->binary.right = right;
 
     return node;
 }
 
-Ast_Node* parse_expression(Token_Array* tokens);
+Ast_Expression* new_literal(Token token) {
+    Ast_Expression* node = calloc(sizeof(Ast_Expression), 1);
+    node->kind = Ast_Literal;
+    node->literal.kind = token.kind;
+    node->literal.integer = token.integer;
 
-Ast_Node* parse_paren(Token_Array* tokens) {
+    return node;
+}
+
+Ast_Expression* new_identifier(Token token) {
+    Ast_Expression* node = calloc(sizeof(Ast_Expression), 1);
+    node->kind = Ast_Identifier;
+    node->identifier = token.identifier;
+
+    return node;
+}
+
+
+Token parser_current_token(Parser *parser) {
+    return parser->current;
+}
+
+void parser_next_token(Parser *parser) {
+    parser->current = next_token(&parser->lexer);
+}
+
+void parser_expect_token(Parser *parser, Token_Kind kind) {
+    assert(parser->current.kind == kind);
+    parser_next_token(parser);
+}
+
+int parser_is_token(Parser* parser, Token_Kind kind) {
+    return parser_current_token(parser).kind == kind;
+}
+
+
+#define curr() (parser_current_token(parser))
+#define next() (parser_next_token(parser))
+#define expect(kind) (parser_expect_token(parser, kind))
+#define is(kind) (parser_is_token(parser, kind))
+
+Ast_Expression* parse_expression(Parser *parser);
+
+Ast_Expression* parse_leaf(Parser *parser) {
+    Ast_Expression* node;
+
+    switch (curr().kind) {
+        case Token_Int:
+            node = new_literal(curr());
+            next();
+            break;
+        case Token_Identifier:
+            Token token = curr();
+            next();
+
+            node = new_identifier(token);
+
+            if (is(Token_Lparen)) {
+                next();
+                node->kind = Ast_Function_Call;
+                node->function_call.identifier = token.identifier;
+
+                int expect_comma = 0;
+
+                while (!is(Token_Rparen)) {
+                    if (expect_comma) {
+                        expect(Token_Comma);
+                    }
+                    Ast_Expression* param = parse_expression(parser);
+                    array_push_back(&node->function_call.parameters, param);
+
+                    expect_comma = 1;
+                }
+                expect(Token_Rparen);
+
+            }
+            break;
+        default:
+            fprintf(stderr, "[ERROR]: expected either Integer Or Identifier got something else.\n");
+            exit(1);
+    }
+
+    return node;
+
+}
+
+
+Ast_Expression* parse_paren(Parser *parser) {
     Token token;
-    Ast_Node* node;
+    Ast_Expression* node;
 
-    token = tokens->buff[0];
+    token = curr();
 
     switch (token.kind) {
         case Token_Lparen:
-            tokens->buff++;
-            node = parse_expression(tokens);
-            token = tokens->buff[0];
-
-            if (token.kind != Token_Rparen) {
-                fprintf(stderr, "[ERROR]: Expected Rparen, got something else.\n");
-                exit(1);
-            }
-
-            tokens->buff++;
-            break;
-        case Token_Int:
-            tokens->buff++;
-            node = new_integer(token.integer);
+            next();
+            node = parse_expression(parser);
+            expect(Token_Rparen);
             break;
         default:
-            if (token.kind != Token_Rparen) {
-                fprintf(stderr, "[ERROR]: Expected Lparen or Integer, got something else.\n");
-                exit(1);
-            }
+            node = parse_leaf(parser);
+            break;
     }
 
     return node;
 }
 
-Ast_Node* parse_mul_div(Token_Array* tokens) {
+Ast_Expression* parse_and(Parser* parser) {
+    Ast_Expression *left, *right;
+    left = parse_paren(parser);
+
+    while (curr().kind == Token_And) {
+        next();
+
+        right = parse_paren(parser);
+
+        left = new_binary_operator(Token_Or, left, right);
+    }
+
+    return left;
+}
+
+
+Ast_Expression* parse_or(Parser* parser) {
+    Ast_Expression *left, *right;
+    left = parse_and(parser);
+
+    while (curr().kind == Token_Or) {
+        next();
+
+        right = parse_and(parser);
+
+        left = new_binary_operator(Token_Or, left, right);
+    }
+
+    return left;
+}
+
+
+Ast_Expression* parse_mul(Parser* parser) {
     Token operator;
-    Ast_Node *left, *right;
-    left = parse_paren(tokens);
+    Ast_Expression *left, *right;
+    left = parse_or(parser);
 
-    while (tokens->buff[0].kind == Token_Mul || tokens->buff[0].kind == Token_Div) {
-        operator = tokens->buff[0];
-        tokens->buff++;
+    while (curr().kind == Token_Mul || curr().kind == Token_Div || curr().kind == Token_Mod) {
+        operator = curr();
+        next();
 
-        right = parse_paren(tokens);
+        right = parse_or(parser);
 
         left = new_binary_operator(operator.kind, left, right);
     }
@@ -316,16 +264,16 @@ Ast_Node* parse_mul_div(Token_Array* tokens) {
     return left;
 }
 
-Ast_Node* parse_add_sub(Token_Array* tokens) {
+Ast_Expression* parse_add(Parser* parser) {
     Token operator;
-    Ast_Node *left, *right;
-    left = parse_mul_div(tokens);
+    Ast_Expression *left, *right;
+    left = parse_mul(parser);
 
-    while (tokens->buff[0].kind == Token_Add || tokens->buff[0].kind == Token_Sub) {
-        operator = tokens->buff[0];
-        tokens->buff++;
+    while (curr().kind == Token_Add || curr().kind == Token_Sub) {
+        operator = curr();
+        next();
 
-        right = parse_mul_div(tokens);
+        right = parse_mul(parser);
 
         left = new_binary_operator(operator.kind, left, right);
     }
@@ -333,75 +281,120 @@ Ast_Node* parse_add_sub(Token_Array* tokens) {
     return left;
 }
 
-Ast_Node* parse_expression(Token_Array* tokens) {
-    return parse_add_sub(tokens);
-}
+Ast_Expression* parse_assign(Parser *parser) {
+    Token operator;
+    Ast_Expression *left, *right;
+    left = parse_add(parser);
 
-Ast_Node* parse(Token_Array tokens) {
-    return parse_expression(&tokens);
-}
+    if (curr().kind == Token_Assign) {
+        next();
 
-void print_ast_recursive(Ast_Node *node);
+        right = parse_add(parser);
 
-void print_operator(Operator_Kind kind) {
-    switch (kind) {
-        case Operator_Add:
-            printf("+");
-            break;
-        case Operator_Sub:
-            printf("-");
-            break;
-        case Operator_Mul:
-            printf("*");
-            break;
-        case Operator_Div:
-            printf("/");
-            break;
-    }
-}
-
-void print_ast_recursive(Ast_Node *node) {
-    if (node->kind == Ast_Literal) {
-        printf("%ld", node->literal.integer);
-    } else if (node->kind == Ast_Operator) {
-        printf("(");
-        print_ast_recursive(node->binary_operator.left);
-        print_operator(node->binary_operator.kind);
-        print_ast_recursive(node->binary_operator.right);
-        printf(")");
+        left = new_binary_operator(Token_Assign, left, right);
     }
 
+    return left;
 }
 
-void print_ast(Ast_Node* root) {
-    print_ast_recursive(root);
-    printf("\n");
+
+Ast_Expression* parse_expression(Parser* parser) {
+    return parse_assign(parser);
 }
 
-int64_t eval(Ast_Node* node);
 
-int64_t eval(Ast_Node* node) {
-    if (node->kind == Ast_Literal) {
-        return node->literal.integer;
-    } else if (node->kind == Ast_Operator) {
-        int64_t left = eval(node->binary_operator.left);
-        int64_t right = eval(node->binary_operator.right);
 
-        switch (node->binary_operator.kind) {
-            case Operator_Add:
-                return left + right;
-            case Operator_Sub:
-                return left - right;
-            case Operator_Mul:
-                return left * right;
-            case Operator_Div:
-                return left / right;
-            default:
-                fprintf(stderr, "[ERROR]: error evaluating expression.\n");
-                exit(1);
+Ast_Module parse_module(Parser* parser) {
+    Ast_Module module = (Ast_Module) {0};
+
+    while (!is(Token_Eof)) {
+        while (is(Token_Semicolon)) {
+            next();
         }
+        Ast_Expression* expression = parse_expression(parser);
+
+        array_push_back(&module.statements, expression);
+
+        expect(Token_Semicolon);
+    }
+
+    return module;
+}
+
+void print_expression(Ast_Expression* exp, int tabs) {
+    for (int i = 0; i < tabs; ++i) {
+        printf("    ");
+    }
+    char *str;
+    switch (exp->kind) {
+        case Ast_Binary:
+            switch (exp->binary.kind) {
+                case Ast_Binary_Assign:
+                    str = "ASSIGN";
+                    break;
+                case Ast_Binary_Add:
+                    str = "ADD";
+                    break;
+                case Ast_Binary_Sub:
+                    str = "SUB";
+                    break;
+                case Ast_Binary_Mul:
+                    str = "MUL";
+                    break;
+                case Ast_Binary_Div:
+                    str = "DIV";
+                    break;
+                case Ast_Binary_Mod:
+                    str = "MOD";
+                    break;
+                case Ast_Binary_And:
+                    str = "AND";
+                    break;
+                case Ast_Binary_Or:
+                    str = "OR";
+                    break;
+                default:
+                    str = "UNKNOWN";
+                    break;
+            }
+
+            printf("[BINARY; %s]\n", str);
+            print_expression(exp->binary.left, tabs + 1);
+            print_expression(exp->binary.right, tabs + 1);
+
+            break;
+        case Ast_Literal:
+            printf("[LITERAL; %ld]\n", exp->literal.integer);
+            break;
+        case Ast_Identifier:
+            printf("[IDENTIFIER; %s]\n", exp->identifier.str);
+            break;
+        case Ast_Function_Call:
+            printf("[FUNCTION_CALL; %s]\n", exp->function_call.identifier.str);
+
+            for (size_t i = 0; i < exp->function_call.parameters.sz; ++i) {
+                print_expression(exp->function_call.parameters.arr[i], tabs + 1);
+            }
+            break;
+        default:
+            fprintf(stderr, "UNKNOWN expression");
+            exit(1);
     }
 }
+
+void print_module(Ast_Module module) {
+    printf("[MODULE] name=module\n");
+
+    for (size_t i = 0; i < module.statements.sz; ++i) {
+        print_expression(module.statements.arr[i], 1);
+    }
+}
+
+
+#undef curr
+#undef next
+#undef expect
+#undef is
 
 #endif // SLANG_PARSE_C
 

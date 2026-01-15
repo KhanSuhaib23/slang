@@ -26,6 +26,7 @@ typedef enum {
     // structure
 	Token_Lparen,
 	Token_Rparen,
+    Token_Comma,
     Token_Semicolon,
 
     // literals
@@ -48,6 +49,7 @@ const Token_Kind char_map[256] = {
     ['='] = Token_Assign,
     ['('] = Token_Lparen,
     [')'] = Token_Rparen,
+    [','] = Token_Comma,
     [';'] = Token_Semicolon
 };
 
@@ -70,6 +72,7 @@ const char *token_strings[Token_Count] = {
     // grouping operators
     [Token_Lparen] = "(",
     [Token_Rparen] = ")",
+    [Token_Comma] = ",",
     [Token_Semicolon] = ";",
 };
 
@@ -176,7 +179,7 @@ Token next_token(Lexer* lexer) {
 
         case '+': case '-': case '*': case '/': case '%':
         case '=': case '&': case '|': case ')': case '(':
-        case ';':
+        case ',': case ';':
             token.kind = char_map[lex_curr()];
             lex_next();
 
@@ -189,7 +192,6 @@ Token next_token(Lexer* lexer) {
             break;
 
     }
-
 
 	return token;
 }

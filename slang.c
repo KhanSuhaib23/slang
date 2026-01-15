@@ -7,12 +7,14 @@
 #define STRING_C
 
 #include "lex.c"
+#include "parse.c"
 #include "string.c"
 
 int main(int argc, char* argv[]) {
 	char *filename;
 	size_t count, i;
     Lexer lexer;
+    Parser parser;
 	FILE* fp;
     Token token;
 
@@ -24,10 +26,12 @@ int main(int argc, char* argv[]) {
 	filename = argv[1]; 
 
     lexer = create_lexer(filename);
+    parser = create_parser(lexer);
 
-    while (token = next_token(&lexer), token.kind != Token_Eof) {
-        print_token(token);
-    }
+
+    Ast_Module module = parse_module(&parser);
+
+    print_module(module);
 
 	return 0;
 }
