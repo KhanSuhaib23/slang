@@ -224,7 +224,7 @@ Ast_Expression* parse_and(Parser* parser) {
 
         right = parse_paren(parser);
 
-        left = new_binary_operator(Token_Or, left, right);
+        left = new_binary_operator(Token_And, left, right);
     }
 
     return left;

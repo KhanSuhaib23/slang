@@ -5,10 +5,12 @@
 #define SLANG_LEX_C
 #define SLANG_PARSE_C
 #define STRING_C
+#define SLANG_EXEC_C
 
 #include "lex.c"
 #include "parse.c"
 #include "string.c"
+#include "exec.c"
 
 int main(int argc, char* argv[]) {
 	char *filename;
@@ -31,7 +33,10 @@ int main(int argc, char* argv[]) {
 
     Ast_Module module = parse_module(&parser);
 
-    print_module(module);
+    Execution_Context context = (Execution_Context) {0};
+    context.module = module;
+
+    execute(&context);
 
 	return 0;
 }
