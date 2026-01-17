@@ -27,7 +27,7 @@ int main(int argc, char* argv[]) {
 
 	filename = argv[1]; 
 
-    lexer = create_lexer(filename);
+    lexer = create_lexer_from_filename(filename);
     parser = create_parser(lexer);
 
 

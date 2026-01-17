@@ -159,7 +159,7 @@ Ast_Expression* parse_leaf(Parser *parser) {
             node = new_literal(curr());
             next();
             break;
-        case Token_Identifier:
+        case Token_Ident:
             Token token = curr();
             next();
 
