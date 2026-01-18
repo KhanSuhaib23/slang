@@ -3,6 +3,7 @@
 
 #include <stdint.h>
 #include <stdlib.h>
+#include <assert.h>
 
 #include "error.c"
 #include "string.c"
@@ -137,31 +138,27 @@ typedef struct {
     const char *st, *curr;
 } Lexer;
 
-Lexer create_lexer_from_filename(const char* filename);
-Token next_token(Lexer* lexer);
+Lexer lexer_from_file(FILE *file, const char *name);
+Token next_token(Lexer *lexer);
 void print_token(Token token);
 
 #ifdef SLANG_LEX_C
 
-Lexer create_lexer_from_filename(const char* filename) {
-	FILE *fp = fopen(filename, "r");
+Lexer lexer_from_file(FILE *file, const char* name) {
+    assert(file != NULL);
 
-	if (fp == NULL) {
-		fprintf(stderr, "[ERROR] File %s doesn't exist\n", filename);
-	}
-
-	fseek(fp, 0, SEEK_END);
-	long file_size = ftell(fp);
-	fseek(fp, 0, SEEK_SET);
+	fseek(file, 0, SEEK_END);
+	long file_size = ftell(file);
+	fseek(file, 0, SEEK_SET);
 
 	char* file_buff = malloc(file_size + 1);
 	file_buff[file_size] = '\0';
 
-	fread(file_buff, file_size, 1, fp);
+	fread(file_buff, file_size, 1, file);
 
     return (Lexer) {
         .col = 1, .lineno = 1, .pos = 0,
-        .filename = filename, 
+        .filename = name, 
         .line = file_buff,
         .st = file_buff, .curr = file_buff
     };
@@ -239,14 +236,11 @@ Token next_token(Lexer* lexer) {
             record_st();
             break;
         default:
-            record_st();
-            token.kind = Token_Unknown;
             print_error(lexer->filename, lexer->lineno, lexer->col,
                     "found unknown character %c", curr());
 
             print_line_with_pointer(lexer->line, lexer->lineno, lexer->col, lexer->col);
-            next();
-            record_ed();
+            exit(1);
 
             break;
 

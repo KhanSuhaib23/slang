@@ -27,8 +27,14 @@ int main(int argc, char* argv[]) {
 
 	filename = argv[1]; 
 
-    lexer = create_lexer_from_filename(filename);
-    parser = create_parser(lexer);
+    fp = fopen(filename, "r");
+
+    if (fp == NULL) {
+        fprintf(stderr, "filename '%s' doesn't exist.\n", filename);
+    }
+
+    lexer = lexer_from_file(fp, filename);
+    parser = parser_new(lexer);
 
 
     Ast_Module module = parse_module(&parser);

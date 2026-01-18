@@ -64,7 +64,7 @@ size_t evaluate_lhs_expression(Execution_Context *context, Ast_Expression* expre
 
 }
 
-Value evaluate_operation(Ast_Binary_Kind operation, Value left, Value right) {
+Value evaluate_operation(Token_Kind operation, Value left, Value right) {
     if (left.kind != Value_Kind_Int || right.kind != Value_Kind_Int) {
         fprintf(stderr, "[ERROR]: Can only evaluate expression between 2 integers\n");
         exit(1);
@@ -74,19 +74,19 @@ Value evaluate_operation(Ast_Binary_Kind operation, Value left, Value right) {
     int64_t r = right.integer;
 
     switch (operation) {
-        case Ast_Binary_Add:
+        case '+':
             return (Value) { .kind = Value_Kind_Int, .integer = l + r };
-        case Ast_Binary_Sub:
+        case '-':
             return (Value) { .kind = Value_Kind_Int, .integer = l - r };
-        case Ast_Binary_Mul:
+        case '*':
             return (Value) { .kind = Value_Kind_Int, .integer = l * r };
-        case Ast_Binary_Div:
+        case '/':
             return (Value) { .kind = Value_Kind_Int, .integer = l / r };
-        case Ast_Binary_Mod:
+        case '%':
             return (Value) { .kind = Value_Kind_Int, .integer = l % r };
-        case Ast_Binary_And:
+        case '&':
             return (Value) { .kind = Value_Kind_Int, .integer = l & r };
-        case Ast_Binary_Or:
+        case '|':
             return (Value) { .kind = Value_Kind_Int, .integer = l | r };
         default:
             assert(0);
@@ -133,20 +133,16 @@ Value execute_expression(Execution_Context *context, Ast_Expression* expression)
     switch (expression->kind) {
         case Ast_Binary:
             switch (expression->binary.kind) {
-                case Ast_Binary_Assign:
+                case '=':
                     size_t var_index = evaluate_lhs_expression(context, expression->binary.left);
                     Value value = execute_expression(context, expression->binary.right);
 
                     context->variables.arr[var_index].value = value;
 
                     return value;
-                case Ast_Binary_Add:
-                case Ast_Binary_Sub:
-                case Ast_Binary_Mul:
-                case Ast_Binary_Div:
-                case Ast_Binary_Mod:
-                case Ast_Binary_And:
-                case Ast_Binary_Or:
+                    
+                case '+': case '-': case '*': case '/': case '%':
+                case '&': case '|':
                     Value left = execute_expression(context, expression->binary.left);
                     Value right = execute_expression(context, expression->binary.right);
 
@@ -155,7 +151,7 @@ Value execute_expression(Execution_Context *context, Ast_Expression* expression)
             }
             break;
         case Ast_Literal:
-            if (expression->literal.kind != Ast_Expression_Integer) {
+            if (expression->literal.kind != Token_Int) {
                 assert(0);
             }
             return (Value) {
