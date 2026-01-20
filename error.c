@@ -14,7 +14,7 @@ static void print_error(const char* filename, size_t lineno, size_t col, const c
     fprintf(stderr, file("%s %zd:%zd") " :: " error("error") ": ", basename((char*) filename), lineno, col);
 
     va_start(args, fmt);
-    fprintf(stderr, fmt, args);
+    vfprintf(stderr, fmt, args);
     va_end(args);
     fprintf(stderr, "\n");
 }
@@ -45,8 +45,8 @@ static void print_line_with_pointer(const char *line, size_t line_no, size_t col
             (int) (col_to - col_from + 1), 
             line + col_from);
     fprintf(stderr, "%*.*s\n",
-            (int) (sz - col_from - 1),
-            (int) (sz - col_from - 1),
+            (int) (sz - col_to - 1),
+            (int) (sz - col_to - 1),
             line + col_to + 1);
 
 
